@@ -15,7 +15,7 @@ https://crackmy.app/crackmes/basic-logic-by-eholzbach-by-crackmes-de-85983
 ![alt text](images/4.png)
 
 Защита от отладки\
-![alt text](images/5.png)
+![alt text](images/5.png)\
 При детекте будет удален исследуемый файл\
 ![alt text](images/6.png)
 
