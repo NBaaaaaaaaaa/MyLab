@@ -24,3 +24,18 @@ https://crackmy.app/crackmes/no-standards-by-toasterbirb-63727
 
 Сохраняет два байта `w\n`\
 ![alt text](images/5.png)
+
+---
+
+За проверку пароля отвечает фукнция `0x12ff`. Возвращает 0, если строки равны.\
+![alt text](images/6.png)
+
+---
+
+В программе присутствует проверка на отладку. Она находится в функции `0x1475`. Вызывается функция `ptrace`.\
+![alt text](images/7.png)
+
+---
+
+Победа.\
+![alt text](images/8.png)
