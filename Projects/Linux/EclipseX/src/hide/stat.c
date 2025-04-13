@@ -4,17 +4,10 @@
 */
 
 /*
-    Находятся в resources/hide_files_functions.c
+    Находятся в src/hide/filter_functions.c
     
     bool copy_filepath(char *filepath, char **kfilepath);
-    bool is_hide_uid(unsigned int file_uid);
-    bool is_hide_gid(unsigned int file_gid);
     bool is_hide_file(unsigned int file_uid, unsigned int file_gid, char *kfilepath);
-
-    unsigned int uids[];
-    unsigned int gids[];
-    struct Extended_array ea_uids;
-    struct Extended_array ea_gids;
 */
 
 bool copy_file_stat(struct stat *statbuf, struct stat **kstatbuf);

