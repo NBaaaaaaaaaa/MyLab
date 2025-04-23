@@ -1,7 +1,7 @@
 #ifndef FILES_H
 #define FILES_H
 
-#include "../../hooks.h"
+#include "../../hook_functions.h"
 
 bool is_hide_uid(unsigned int file_uid);
 bool is_hide_gid(unsigned int file_gid);

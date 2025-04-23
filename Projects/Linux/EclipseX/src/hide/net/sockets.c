@@ -46,7 +46,7 @@ asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v)
 
 // #include <asm-generic/access_ok.h>
 
-// static asmlinkage long ex_sys_recvmsg(struct pt_regs *regs) {
+// asmlinkage long ex_sys_recvmsg(struct pt_regs *regs) {
 //     long ret = real_sys_recvmsg(regs);
 
 //     if (ret <= 100 ) {
@@ -147,9 +147,9 @@ asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v)
 // // ----------------------------------------------------------------------
 
 // out:
-//     if (buffer) {
-//         kfree(buffer);
-//     }
+    // if (buffer) {
+    //     kfree(buffer);
+    // }
 
 //     return ret;
 // }

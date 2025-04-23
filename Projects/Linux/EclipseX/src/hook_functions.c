@@ -1,11 +1,7 @@
-#include "hooks.h"
+#include "hook_functions.h"
 
-bool (*real_filldir64)(struct dir_context *ctx, const char *name, int namlen,
-		     loff_t offset, u64 ino, unsigned int d_type) = NULL;
-bool (*real_filldir)(struct dir_context *ctx, const char *name, int namlen,
-		     loff_t offset, u64 ino, unsigned int d_type) = NULL;
-
-
+bool (*real_filldir64)(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type) = NULL;
+bool (*real_filldir)(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type) = NULL;
 
 asmlinkage long (*real_sys_stat)(struct pt_regs *regs) = NULL;
 asmlinkage long (*real_sys_lstat)(struct pt_regs *regs) = NULL;

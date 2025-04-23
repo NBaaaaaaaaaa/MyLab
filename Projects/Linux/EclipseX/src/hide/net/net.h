@@ -2,7 +2,7 @@
 #ifndef NET_H
 #define NET_H
 
-#include "../../hooks.h"
+#include "../../hook_functions.h"
 extern int debug_lvl;
 
 enum Protocols {
