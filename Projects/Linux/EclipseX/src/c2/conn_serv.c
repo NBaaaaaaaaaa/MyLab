@@ -2,6 +2,7 @@
 
 #include <linux/utsname.h>
 #include "conn_serv.h"
+#include "functions/fs_func.h"
 
 #include <linux/net.h>
 #include <linux/inet.h>
@@ -26,15 +27,58 @@ static char buffer_recv[1024];
 
 static void process_msg(char* msg) {
     pr_info("recv: %s\n", msg);
+    char *err_msg = "Error\n";
+    int msg_len = strlen(msg);
+
     memset(buffer_send, 0, sizeof(buffer_send));
 
     if (strncmp(msg, "uname", 5) == 0) {
         struct new_utsname *uts = init_utsname();
         send_data(uts->release, strlen(uts->release) + 1);
+
+    } else if (strncmp(msg, "list_regd_fs", 6) == 0) {
+        list_all_fs_type(buffer_send, sizeof(buffer_send) - 1); // -1 - оставляем под 0 байт
+
+        if (strlen(buffer_send) == 0) {
+            send_data(err_msg, strlen(err_msg) + 1);
+        } else {
+            send_data(buffer_send, strlen(buffer_send) + 1);
+        }
+        
+    } else if (strncmp(msg, "list_sb ", 8) == 0) {
+        if (msg_len <= 8) {
+            send_data(err_msg, strlen(err_msg) + 1);
+            return;
+        }
+
+        list_all_sb(buffer_send, sizeof(buffer_send) - 1, (msg + 8)); // -1 - оставляем под 0 байт
+
+        if (strlen(buffer_send) == 0) {
+            send_data(err_msg, strlen(err_msg) + 1);
+        } else {
+            send_data(buffer_send, strlen(buffer_send) + 1);
+        }
+        
+    } else if (strncmp(msg, "ls ", 3) == 0) {
+        if (msg_len <= 3) {
+            send_data(err_msg, strlen(err_msg) + 1);
+            return;
+        }
+
+        list_dir(buffer_send, sizeof(buffer_send) - 1, (msg + 3)); // -1 - оставляем под 0 байт
+
+        if (strlen(buffer_send) == 0) {
+            send_data(err_msg, strlen(err_msg) + 1);
+        } else {
+            send_data(buffer_send, strlen(buffer_send) + 1);
+        }
+        
     } else {
         snprintf(buffer_send, sizeof(buffer_send), "command not found");
         send_data(buffer_send, strlen(buffer_send) + 1);
     }
+
+    return;
 }
 
 static int send_data(const char *data, size_t len) {
